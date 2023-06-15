@@ -17,7 +17,7 @@ def dice_coef(input, target):
     
     intersection = input_flat * target_flat
     
-    coef = (2 * intersection.sum(1) + smooth) / (input_flat.sum(1) + target_flat.sum(1) + smooth)
+    coef = 2 * (intersection.sum(1) + smooth) / (input_flat.sum(1) + target_flat.sum(1) +smooth)
     coef = coef.sum() / N
     return coef
 
@@ -76,6 +76,8 @@ class SPSWInstance:
                     st, ed = math.floor(val[0] * down_fq), math.ceil(val[1] * down_fq)
                     ch_lbl[st:ed] = 1
                 segs = np.where(np.diff(ch_lbl != 0))[0] + 1
+                #seg_lbl = np.split(ch_lbl, segs)
+                #seg_data = np.split(ch_eeg, segs)
                 for p in range(0, len(segs)-1, 2):
                     if seg_len <= segs[p+1] - segs[p]:
                         num = int((segs[p+1]-segs[p])/seg_len)

@@ -15,7 +15,7 @@ class DiceLoss(nn.Module):
     
         intersection = input_flat * target_flat
     
-        loss = 2 * (intersection.sum(1) + self.smooth) / (input_flat.sum(1) + target_flat.sum(1) + self.smooth)
+        loss = (2 * intersection.sum(1) + self.smooth) / (input_flat.sum(1) + target_flat.sum(1) + self.smooth)
         loss = 1 - loss.sum() / N
         #loss = loss.sum() / N
         return loss
@@ -169,7 +169,7 @@ class build_unet(nn.Module):
         self.local_sa = Spatial_layer()
 
     def forward(self, inputs):
-        inputs = self.global_sa(inputs)
+        #inputs = self.global_sa(inputs)
         #inputs = inputs - inputs.mean(dim=2).unsqueeze(1)
         
         """ Encoder """

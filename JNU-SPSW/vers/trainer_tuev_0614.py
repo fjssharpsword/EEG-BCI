@@ -15,7 +15,6 @@ from tensorboardX import SummaryWriter
 #self-defined
 from dsts.generator import build_dataset, dice_coef
 from nets.utime import build_unet, DiceLoss
-from dsts.tuev_spsw import build_dataset as tuev_build_dataset
 
 def train_epoch(model, dataloader, loss_fn, optimizer, device):
     tr_loss = []
@@ -46,7 +45,7 @@ def eval_epoch(model, dataloader, loss_fn, device):
         te_loss.append(loss.item())
 
         gt_lbl = torch.cat((gt_lbl, lbls), 0)
-        var_out = torch.where(var_out>0.5, 1, 0) 
+        var_out = torch.where(var_out>0.5, 1, 0) #for dice loss
         pr_lbl = torch.cat((pr_lbl, var_out.cpu()), 0)
 
     te_loss = np.mean(te_loss)
@@ -72,7 +71,8 @@ def Train_Eval():
     print('********************Train and validation********************')
     X, y = build_dataset(down_fq=250, seg_len=250) #time domain
 
-    X_tuev, y_tuev = tuev_build_dataset(down_fq=250, seg_len=250) #normal samples
+    PATH_TO_DST_ROOT = '/data/pycode/EEG-BCI/JNU-SPSW/dsts/'
+    X_tuev, y_tuev = np.load(PATH_TO_DST_ROOT+'tuev_spsw_eeg.npy'), np.load(PATH_TO_DST_ROOT+'tuev_spsw_lbl.npy')
     X, y = np.vstack((X,X_tuev)), np.vstack((y, y_tuev))
 
     print('\r Sample number: {}'.format(len(y)))
@@ -109,7 +109,7 @@ def Train_Eval():
                 best_acc = te_acc
                 best_f1 = te_f1
                 if len(dice_list) == 0 or (len(dice_list) > 0 and best_dice > np.max(dice_list)):
-                    torch.save(model.state_dict(), '/data/pycode/EEG-BCI/JNU-SPSW/ckpts/utime_tf.pkl')
+                    torch.save(model.state_dict(), '/data/pycode/EEG-BCI/JNU-SPSW/ckpts/utime_tuev.pkl')
                     print(' Epoch: {} model has been already save!'.format(epoch+1))
        
         dice_list.append(best_dice)
@@ -129,4 +129,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    #nohup python3 -u trainer.py >> /data/tmpexec/tb_log/utime_tf.log 2>&1 &
+    #nohup python3 -u trainer.py >> /data/tmpexec/tb_log/utime_tuev.log 2>&1 &

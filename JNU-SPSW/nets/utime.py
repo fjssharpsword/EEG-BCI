@@ -18,7 +18,7 @@ class DiceLoss(nn.Module):
     
         intersection = input_flat * target_flat
     
-        loss = 2 * (intersection.sum(1) + self.smooth) / (input_flat.sum(1) + target_flat.sum(1) + self.smooth)
+        loss = (2 * intersection.sum(1) + self.smooth) / (input_flat.sum(1) + target_flat.sum(1) + self.smooth)
         loss = 1 - loss.sum() / N
         #loss = loss.sum() / N
         return loss
@@ -51,21 +51,6 @@ class ConvBNReLU(nn.Module):
 
     def forward(self, x):
         return self.layers(x)
-
-class Spatial_layer(nn.Module):#spatial attention layer
-    def __init__(self):
-        super(Spatial_layer, self).__init__()
-
-        self.conv1 = nn.Conv1d(2, 1, kernel_size=3, padding=1, bias=False)
-        self.sigmoid = nn.Sigmoid()
-        
-    def forward(self, x):
-        identity = x
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)*identity
     
 class Encoder(nn.Module):
     def __init__(self, filters=[16, 32, 64, 128], in_channels=5, maxpool_kernels=[2, 2, 2, 2], kernel_size=3, dilation=1):
@@ -114,7 +99,6 @@ class Encoder(nn.Module):
                 kernel_size=self.kernel_size
             ),
         )
-        #self.sa_layer = Spatial_layer()
 
     def forward(self, x):
         shortcuts = []
@@ -122,7 +106,6 @@ class Encoder(nn.Module):
             z = layer(x)
             shortcuts.append(z)
             x = maxpool(z)
-            #x = self.sa_layer(x) #layer added by fjs
         # Bottom part
         encoded = self.bottom(x)
 

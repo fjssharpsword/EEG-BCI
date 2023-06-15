@@ -70,12 +70,21 @@ class SPSWInstance:
                 segs = np.where(np.diff(ch_lbl != 0))[0] + 1
                 #segs = np.insert(segs, 0, 0)
                 #segs = np.append(segs, len(ch_lbl))
+                """
                 for p in range(0, len(segs)-1, 2):
                     num = int((segs[p+1]-segs[p])/seg_len)
                     for j in range(num):
                         assert ((segs[p]+(j+1)*seg_len) - (segs[p]+j*seg_len)) == seg_len
                         eeg.append(ch_eeg[segs[p]+j*seg_len:segs[p]+(j+1)*seg_len])
                         lbl.append(ch_lbl[segs[p]+j*seg_len:segs[p]+(j+1)*seg_len])
+                """
+                for p in range(0, len(segs)-1, 1):
+                    if ch_lbl[segs[p]:segs[p+1]].sum()==0:
+                        num = int((segs[p+1]-segs[p])/seg_len)
+                        for j in range(num):
+                            assert ((segs[p]+(j+1)*seg_len) - (segs[p]+j*seg_len)) == seg_len
+                            eeg.append(ch_eeg[segs[p]+j*seg_len:segs[p]+(j+1)*seg_len])
+                            lbl.append(ch_lbl[segs[p]+j*seg_len:segs[p]+(j+1)*seg_len])
         
         return eeg, lbl
 

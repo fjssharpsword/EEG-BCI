@@ -22,77 +22,6 @@ class DiceLoss(nn.Module):
         loss = 1 - loss.sum() / N
         #loss = loss.sum() / N
         return loss
-
-
-class FocalInvarianceOp(nn.Module):
-    """ Focal Invariance Operator
-
-    Args:
-        dim (int): Number of input channels.
-        proj_drop (float, optional): Dropout ratio of output. Default: 0.0
-        focal_level (int): Number of focal levels
-        focal_window (int): Focal window size at focal level 1
-        focal_factor (int, default=2): Step to increase the focal window
-        use_postln (bool, default=False): Whether use post-modulation layernorm
-    """
-
-    def __init__(self, dim, proj_drop=0., focal_level=2, focal_window=25, focal_factor=2, use_postln=False):
-
-        super().__init__()
-        self.dim = dim
-
-        # specific args for focalv3
-        self.focal_level = focal_level
-        self.focal_window = focal_window
-        self.focal_factor = focal_factor
-        self.use_postln = use_postln
-
-        self.f = nn.Linear(dim, 2*dim+(self.focal_level+1), bias=True)
-        self.h = nn.Conv1d(dim, dim, kernel_size=1, stride=1, padding=0, groups=1, bias=True)
-
-        self.act = nn.GELU()
-        self.proj = nn.Linear(dim, dim)
-        self.proj_drop = nn.Dropout(proj_drop)
-        self.focal_layers = nn.ModuleList()
-
-        if self.use_postln:
-            self.ln = nn.LayerNorm(dim)
-
-        for k in range(self.focal_level):
-            kernel_size = self.focal_factor*k + self.focal_window
-            self.focal_layers.append(
-                nn.Sequential(
-                    nn.Conv1d(dim, dim, kernel_size=kernel_size, stride=1, groups=dim, padding=kernel_size//2, bias=False),
-                    nn.GELU(),
-                    )
-                )
-
-    def forward(self, x):
-        """ Forward function.
-
-        Args:
-            x: input features with shape of (B, C, D)
-        """
-        x = x.permute(0,2,1)#(B,C,D) to (B,D,C)
-        B, D, C = x.shape
-        x = self.f(x)
-        x = x.permute(0, 2, 1).contiguous()
-        q, ctx, gates = torch.split(x, (C, C, self.focal_level+1), 1)
-        
-        ctx_all = 0
-        for l in range(self.focal_level):                     
-            ctx = self.focal_layers[l](ctx)
-            ctx_all = ctx_all + ctx*gates[:, l:l+1]
-        ctx_global = self.act(ctx.mean(2, keepdim=True))
-        ctx_all = ctx_all + ctx_global*gates[:,self.focal_level:]
-
-        x_out = q * self.h(ctx_all)
-        x_out = x_out.permute(0, 2, 1).contiguous()
-        if self.use_postln:
-            x_out = self.ln(x_out)            
-        x_out = self.proj(x_out)
-        x_out = self.proj_drop(x_out)
-        return x_out.permute(0, 2, 1)
     
 #https://github.com/neergaard/utime-pytorch
 class ConvBNReLU(nn.Module):
@@ -122,6 +51,21 @@ class ConvBNReLU(nn.Module):
 
     def forward(self, x):
         return self.layers(x)
+
+class Spatial_layer(nn.Module):#spatial attention layer
+    def __init__(self):
+        super(Spatial_layer, self).__init__()
+
+        self.conv1 = nn.Conv1d(2, 1, kernel_size=3, padding=1, bias=False)
+        self.sigmoid = nn.Sigmoid()
+        
+    def forward(self, x):
+        identity = x
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        x = torch.cat([avg_out, max_out], dim=1)
+        x = self.conv1(x)
+        return self.sigmoid(x)*identity
     
 class Encoder(nn.Module):
     def __init__(self, filters=[16, 32, 64, 128], in_channels=5, maxpool_kernels=[2, 2, 2, 2], kernel_size=3, dilation=1):
@@ -153,7 +97,6 @@ class Encoder(nn.Module):
                 dilation=self.dilation,
                 activation="relu",
             ),
-            FocalInvarianceOp(dim=self.filters[k]), 
         ) for k in range(self.depth)])
         # fmt: on
 
@@ -171,6 +114,7 @@ class Encoder(nn.Module):
                 kernel_size=self.kernel_size
             ),
         )
+        self.sa_layer = Spatial_layer()
 
     def forward(self, x):
         shortcuts = []
@@ -178,7 +122,7 @@ class Encoder(nn.Module):
             z = layer(x)
             shortcuts.append(z)
             x = maxpool(z)
-
+            x = self.sa_layer(x) #layer added by fjs
         # Bottom part
         encoded = self.bottom(x)
 
