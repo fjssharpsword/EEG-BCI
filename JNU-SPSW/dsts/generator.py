@@ -7,6 +7,7 @@ import os
 import pickle 
 import matplotlib.pyplot as plt
 import pywt
+from pyts.decomposition import SingularSpectrumAnalysis
 
 def dice_coef(input, target):
     smooth = 1
@@ -132,8 +133,11 @@ def build_dataset(down_fq, seg_len):
     eegs, lbls = [], []
     for id in ids:
         spsw = SPSWInstance(id, down_fq, seg_len)
-        eegs.extend(spsw.eeg)
-        lbls.extend(spsw.lbl)
+        eeg = np.array(spsw.eeg)
+        lbl = np.array(spsw.lbl)
+        eeg = SingularSpectrumAnalysis(window_size=30, groups=1).fit_transform(np.array(spsw.eeg))#Singular Spectrum Analysis
+        eegs.extend(eeg)
+        lbls.extend(lbl)
 
     return np.array(eegs), np.array(lbls)
 

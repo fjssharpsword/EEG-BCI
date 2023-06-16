@@ -67,84 +67,6 @@ class decoder_block(nn.Module):
         x = self.conv(x)
         return x
 
-class SelfAttention_layer(nn.Module): 
-    def __init__(self, in_ch=1, k=1):
-        super(SelfAttention_layer, self).__init__()
-
-        self.in_ch = in_ch
-        self.out_ch = in_ch
-        self.mid_ch = in_ch // k
-
-        self.f = nn.Sequential(
-            nn.Conv1d(self.in_ch, self.mid_ch, 1, 1),
-            nn.BatchNorm1d(self.mid_ch),
-            nn.ReLU())
-        self.g = nn.Sequential(
-            nn.Conv1d(self.in_ch, self.mid_ch, 1, 1),
-            nn.BatchNorm1d(self.mid_ch),
-            nn.ReLU())
-        self.h = nn.Conv1d(self.in_ch, self.mid_ch, 1, 1)
-        self.v = nn.Conv1d(self.mid_ch, self.out_ch, 1, 1)
-
-        self.softmax = nn.Softmax(dim=-1)
-
-        for conv in [self.f, self.g, self.h]: 
-            conv.apply(weights_init)
-        self.v.apply(constant_init)
-
-    def _l2normalize(self, v, eps=1e-12):
-        return v / (v.norm() + eps)
-
-    def forward(self, x):
-        B, C, D = x.shape
-
-        f_x = self.f(x).view(B, self.mid_ch, D)  # B * mid_ch * D
-        g_x = self.g(x).view(B, self.mid_ch, D)  # B * mid_ch * D
-        h_x = self.h(x).view(B, self.mid_ch, D)  # B * mid_ch * D
-
-        z = torch.bmm(f_x.permute(0, 2, 1), g_x)  # B * D * D
-        attn = self.softmax((self.mid_ch ** -.50) * z)
-
-        z = torch.bmm(attn, h_x.permute(0, 2, 1))  # B * D * mid_ch
-        z = z.permute(0, 2, 1).view(B, self.mid_ch, D)  # B * mid_ch * D
-
-        z = self.v(z)
-        x = torch.add(z, x) # z + x
-        return x
-
-## Kaiming weight initialisation
-def weights_init(module):
-    if isinstance(module, nn.ReLU):
-        pass
-    if isinstance(module, nn.Conv2d) or isinstance(module, nn.ConvTranspose2d):
-        nn.init.kaiming_normal_(module.weight.data)
-        nn.init.constant_(module.bias.data, 0.0)
-    elif isinstance(module, nn.BatchNorm2d):
-        pass
-def constant_init(module):
-    if isinstance(module, nn.ReLU):
-        pass
-    if isinstance(module, nn.Conv2d) or isinstance(module, nn.ConvTranspose2d):
-        nn.init.constant_(module.weight.data, 0.0)
-        nn.init.constant_(module.bias.data, 0.0)
-    elif isinstance(module, nn.BatchNorm2d):
-        pass
-
-class Spatial_layer(nn.Module):#spatial attention layer
-    def __init__(self):
-        super(Spatial_layer, self).__init__()
-
-        self.conv1 = nn.Conv1d(2, 1, kernel_size=3, padding=1, bias=False)
-        self.sigmoid = nn.Sigmoid()
-        
-    def forward(self, x):
-        identity = x
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)*identity
-
 class build_unet(nn.Module):
     def __init__(self, in_ch =1, n_classes=1):
         super().__init__()
@@ -163,32 +85,14 @@ class build_unet(nn.Module):
         """ Classifier """
         self.outputs = nn.Conv1d(16, n_classes, kernel_size=1, padding=0)
         self.sigmoid = nn.Sigmoid()
-
         #self.dropout = nn.Dropout(p=0.1) 
-        self.global_sa = SelfAttention_layer()
-        self.local_sa = Spatial_layer()
 
     def forward(self, inputs):
-        inputs = self.global_sa(inputs)
-        #inputs = inputs - inputs.mean(dim=2).unsqueeze(1)
-        
         """ Encoder """
         s1, p1 = self.e1(inputs)
-        p1 = self.local_sa(p1)
-        #p1 = self.dropout(p1)
-
         s2, p2 = self.e2(p1)
-        p2 = self.local_sa(p2)
-        #p2 = self.dropout(p2)
-
         s3, p3 = self.e3(p2)
-        p3 = self.local_sa(p3)
-        #p3 = self.dropout(p3)
-
         s4, p4 = self.e4(p3)
-        p4 = self.local_sa(p4)
-        #p4 = self.dropout(p4)
-
         """ Bottleneck """
         b = self.b(p4)
 

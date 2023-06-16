@@ -13,8 +13,9 @@ from torch.utils.data import TensorDataset, DataLoader, SubsetRandomSampler
 from sklearn.metrics import confusion_matrix, f1_score
 import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
+from pyts.decomposition import SingularSpectrumAnalysis
 #self-defined
-from dsts.tuev_spsw import build_dataset
+from dsts.generator import SPSWInstance, build_dataset
 from nets.utime import build_unet
 
 def Detect_SPSW(CKPT_PATH):
@@ -62,11 +63,44 @@ def vis_prediction(PATH_TO_DST_ROOT):
 
     fig.savefig('/data/pycode/EEG-BCI/JNU-SPSW/imgs/tuev_pred.png', dpi=300, bbox_inches='tight') 
 
+def plot_ssa():
+
+    spsw = SPSWInstance(id='00013145_s004_t006', down_fq=250, seg_len=250) #time domain
+    X, y = np.array(spsw.eeg), np.array(spsw.lbl)
+    print('\r Sample number: {}'.format(len(y)))
+
+    Len = 50
+    group = 1 #[np.arange(i, i + 10) for i in range(0, 41, 10)]
+
+    ssa = SingularSpectrumAnalysis(window_size=Len, groups=group)
+    X_ssa = ssa.fit_transform(X)
+    print(X_ssa.shape)
+
+    # Show the results for the first time series and its subseries
+    plt.figure(figsize=(16, 6))
+
+    eeg, lbl = X[0], y[0]
+    x = [id for id in range(1, len(lbl)+1)]
+    plt.plot(x, eeg, label='EDF')
+
+    segs = np.where(np.diff(lbl != 0))[0] + 1
+    plt.plot(segs[0], eeg[segs[0]], marker='^', color='r')
+    plt.plot(segs[1], eeg[segs[1]], marker='v', color='r')
+
+    for i in range(group):
+        plt.plot(x, X_ssa[0, i], label='SSA {0}'.format(i + 1))
+
+    plt.legend(loc='best', fontsize=14)
+    plt.title('Singular Spectrum Analysis', fontsize=20)
+    plt.tight_layout()
+    plt.savefig('/data/pycode/EEG-BCI/JNU-SPSW/imgs/spsw_ssa.png', dpi=300, bbox_inches='tight')
+
 def main():
-    CKPT_PATH = '/data/pycode/EEG-BCI/JNU-SPSW/ckpts/utime.pkl'
+    #CKPT_PATH = '/data/pycode/EEG-BCI/JNU-SPSW/ckpts/utime.pkl'
     #Detect_SPSW(CKPT_PATH)
-    PATH_TO_DST_ROOT = '/data/pycode/EEG-BCI/JNU-SPSW/dsts/'
-    vis_prediction(PATH_TO_DST_ROOT)
+    #PATH_TO_DST_ROOT = '/data/pycode/EEG-BCI/JNU-SPSW/dsts/'
+    #vis_prediction(PATH_TO_DST_ROOT)
+    plot_ssa()
 
 if __name__ == "__main__":
     main()

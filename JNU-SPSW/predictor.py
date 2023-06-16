@@ -134,7 +134,7 @@ def TUEV_Prediction(CKPT_PATH):
         spsw_span.to_csv('/data/tmpexec/tb_log/tuev/pred_{}.csv'.format(id), index=False, encoding='utf-8')
 
 def main():
-    CKPT_PATH = '/data/pycode/EEG-BCI/JNU-SPSW/ckpts/utime_tf.pkl'
+    CKPT_PATH = '/data/pycode/EEG-BCI/JNU-SPSW/ckpts/utime.pkl'
     TUEV_Prediction(CKPT_PATH)
 
 if __name__ == "__main__":
