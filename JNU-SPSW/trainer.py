@@ -14,7 +14,8 @@ from sklearn.metrics import confusion_matrix, f1_score
 from tensorboardX import SummaryWriter
 #self-defined
 from dsts.generator import build_dataset, dice_coef
-from nets.sa_unet import build_unet, DiceLoss
+#from nets.ss_unet import build_unet, DiceLoss
+from nets.fi_unet import build_unet, DiceLoss
 
 def train_epoch(model, dataloader, loss_fn, optimizer, device):
     tr_loss = []
@@ -64,14 +65,14 @@ def eval_epoch(model, dataloader, loss_fn, device):
 
 def Train_Eval():
 
-    device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
     torch.backends.cudnn.benchmark = True  # improve train speed slightly
     #log_writer = SummaryWriter('/data/tmpexec/tb_log')
     
     print('********************Train and validation********************')
     X, y = build_dataset(down_fq=250, seg_len=250) #time domain
     print('\r Sample number: {}'.format(len(y)))
-    dataset = TensorDataset(torch.FloatTensor(X).unsqueeze(1), torch.LongTensor(y))
+    dataset = TensorDataset(torch.FloatTensor(X).unsqueeze(1), torch.LongTensor(y)) #for conv
     kf_set = KFold(n_splits=10, shuffle=True).split(X, y)
 
     dice_list, acc_list, f1_list = [], [], []
@@ -104,7 +105,7 @@ def Train_Eval():
                 best_acc = te_acc
                 best_f1 = te_f1
                 if len(dice_list) == 0 or (len(dice_list) > 0 and best_dice > np.max(dice_list)):
-                    torch.save(model.state_dict(), '/data/pycode/EEG-BCI/JNU-SPSW/ckpts/sa_unet_ssa.pkl')
+                    torch.save(model.state_dict(), '/data/pycode/EEG-BCI/JNU-SPSW/ckpts/fi_unet.pkl')
                     print(' Epoch: {} model has been already save!'.format(epoch+1))
        
         dice_list.append(best_dice)
@@ -124,4 +125,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    #nohup python3 -u trainer.py >> /data/tmpexec/tb_log/sa_unet_ssa.log 2>&1 &
+    #nohup python3 -u trainer.py >> /data/tmpexec/tb_log/fi_unet.log 2>&1 &

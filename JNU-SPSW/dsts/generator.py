@@ -135,7 +135,7 @@ def build_dataset(down_fq, seg_len):
         spsw = SPSWInstance(id, down_fq, seg_len)
         eeg = np.array(spsw.eeg)
         lbl = np.array(spsw.lbl)
-        eeg = SingularSpectrumAnalysis(window_size=30, groups=1).fit_transform(np.array(spsw.eeg))#Singular Spectrum Analysis
+        #eeg = SingularSpectrumAnalysis(window_size=30, groups=1).fit_transform(eeg)#Singular Spectrum Analysis
         eegs.extend(eeg)
         lbls.extend(lbl)
 
