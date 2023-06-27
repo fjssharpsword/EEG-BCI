@@ -20,6 +20,7 @@ from nets.GCN import EEGDGCNN
 from nets.LSTM import EEGLSTM
 from nets.ViT import EEGViT
 from nets.CCNN import TSCeption
+from nets.SZNet import EEGSZNet
 
 def train_epoch(model, dataloader, loss_fn, optimizer, device):
 
@@ -75,7 +76,7 @@ def eval_epoch(model, dataloader, loss_fn, device):
     return pr_dict
 
 def Train_Eval(PATH_TO_DST_ROOT):
-    device = torch.device("cuda:6" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
     torch.backends.cudnn.benchmark = True  # improve train speed slightly
     #log_writer = SummaryWriter('/data/tmpexec/tb_log')
    
@@ -95,10 +96,11 @@ def Train_Eval(PATH_TO_DST_ROOT):
 
         print('********************Build model********************')
         #model = EEG1DConvNet(in_ch = 18, num_classes=2).to(device)  
-        model = EEGDGCNN(in_channels = 18, num_electrodes = 512, num_classes=2).to(device)
+        #model = EEGDGCNN(in_channels = 18, num_electrodes = 512, num_classes=2).to(device)
         #model = EEGLSTM(num_electrodes = 18, hid_channels=64, num_classes=2).to(device)
         #model = EEGViT(num_electrodes=18, chunk_size=512, num_classes=2).to(device)
         #model = TSCeption(num_electrodes=18, num_classes=2).to(device)
+        model = EEGSZNet(num_electrodes=18, num_classes=2).to(device)
 
         optimizer_model = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4)
         lr_scheduler_model = lr_scheduler.StepLR(optimizer_model , step_size = 10, gamma = 1)
@@ -115,7 +117,6 @@ def Train_Eval(PATH_TO_DST_ROOT):
             lr_scheduler_model.step()  #about lr and gamma
             e_pr = eval_epoch(model, te_dataloader, criterion, device)
 
-            #log_writer.add_scalars('EEG/CHB-MIT/Loss', {'Train':tr_loss, 'Test':te_loss}, epoch+1)
             print('\n Train Epoch_{}: Loss={:.4f}, Accuracy={:.4f}'.format(epoch+1, tr_loss, tr_acc))
             print('\n Validation Epoch_{}: Acc={:.4f}, AUC={:.4f}, F1={:.4f}, Kappa={:.4f}'.format(epoch+1, e_pr['Acc'], e_pr['AUC'], e_pr['F1'], e_pr['Kappa']))
 
@@ -152,4 +153,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    #nohup python3 -u trainer.py >> /data/tmpexec/tb_log/GCN_TF.log 2>&1 &
+    #nohup python3 -u trainer.py >> /data/tmpexec/tb_log/SZNet_Temporal_TF.log 2>&1 &
