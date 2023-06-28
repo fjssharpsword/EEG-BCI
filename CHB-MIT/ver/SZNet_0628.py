@@ -53,6 +53,11 @@ class Temporal_layer(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
+        """
+        x = self.ch_layer(x)
+        x = self.sa_layer(x)
+        return x
+        """
         y_s = self.sa_layer(x)
         y_c = self.ch_layer(x)
         y_t = torch.cat([y_s, y_c], dim=1)

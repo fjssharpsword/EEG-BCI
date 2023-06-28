@@ -76,16 +76,18 @@ def eval_epoch(model, dataloader, loss_fn, device):
     return pr_dict
 
 def Train_Eval(PATH_TO_DST_ROOT):
-    device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:6" if torch.cuda.is_available() else "cpu")
     torch.backends.cudnn.benchmark = True  # improve train speed slightly
     #log_writer = SummaryWriter('/data/tmpexec/tb_log')
    
     print('********************Load dataset********************')
     X, y = np.load(PATH_TO_DST_ROOT+'eeg_kfold.npy'), np.load(PATH_TO_DST_ROOT+'lbl_kfold.npy')
-
+    print('\r Sample number: {}'.format(len(y)))
     #X = np.fft.fft(X, axis=1) #Fourier transform, frequence domian
-    X_cA, X_cD = pywt.dwt(X, 'haar', mode='symmetric', axis=1) #wavelet transform, time-frequence domain
-    X = np.concatenate((X_cA, X_cD), axis=1)
+    #print('\r Fourier transform complete')
+    #X_cA, X_cD = pywt.dwt(X, 'haar', mode='symmetric', axis=1) #wavelet transform, time-frequence domain
+    #X = np.concatenate((X_cA, X_cD), axis=1)
+    #print('\r wavelet transform complete')
 
     dataset = TensorDataset(torch.FloatTensor(X).permute(0,2,1), torch.LongTensor(y))
     kf_set = KFold(n_splits=10,shuffle=True).split(X, y)
@@ -153,4 +155,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    #nohup python3 -u trainer.py >> /data/tmpexec/tb_log/SZNet_Temporal_TF.log 2>&1 &
+    #nohup python3 -u trainer.py >> /data/tmpexec/tb_log/SZNet_Temporal_T.log 2>&1 &
