@@ -86,9 +86,9 @@ class Patient:
 
         return labels
 
-    def get_seizure_clips(self):
+    def get_seizure_clips(self, ch_com):
         clips = []
-        data = self.get_eeg_data()
+        data = self.get_eeg_data(ch_com)
         labels = self.get_seizure_labels()
 
         for i in range(len(self._seizure_intervals)):
