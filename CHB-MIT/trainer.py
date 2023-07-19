@@ -105,7 +105,7 @@ def Train_Eval(PATH_TO_DST_ROOT):
         model = EEGSZNet(num_electrodes=18, num_classes=2).to(device)
 
         optimizer_model = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-4)
-        lr_scheduler_model = lr_scheduler.StepLR(optimizer_model , step_size = 10, gamma = 1)
+        lr_scheduler_model = lr_scheduler.StepLR(optimizer_model, step_size = 10, gamma = 1)
         criterion = nn.CrossEntropyLoss()
 
         best_pr = {'Acc':0.0, 'Sen':0.0, 'Spe':0.0, 'AUC':0.0, 'F1':0.0, 'Kappa':0.0}
